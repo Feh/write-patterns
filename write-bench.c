@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
@@ -48,6 +49,20 @@ int is_regular_file(int fd)
 	if(fstat(fd, &st) == -1)
 		return -1;
 	return (S_ISREG(st.st_mode));
+}
+
+ssize_t block_size(int fd)
+{
+	struct statfs st;
+	assert(fstatfs(fd, &st) != -1);
+	return (ssize_t) st.f_bsize;
+}
+
+ssize_t filesize(int fd)
+{
+	struct stat st;
+	assert(fstat(fd, &st) != -1);
+	return (ssize_t) st.st_size;
 }
 
 int main(int argc, char *argv[])
