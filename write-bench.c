@@ -92,7 +92,7 @@ void time_run(struct bench_func *arg, int in, int out)
 		lseek(in, 0, SEEK_SET);
 		lseek(out, 0, SEEK_SET);
 		ftruncate(out, 0);
-		usleep(500000);
+		usleep(100000);
 
 		getrusage(RUSAGE_SELF, &before);
 		clock_gettime(CLOCK_MONOTONIC, &start);
