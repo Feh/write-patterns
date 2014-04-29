@@ -32,6 +32,7 @@ void time_run(struct bench_func *arg, int in, int out)
 		lseek(in, 0, SEEK_SET);
 		lseek(out, 0, SEEK_SET);
 		ftruncate(out, 0);
+		usleep(500000);
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		arg->f(in, out);
