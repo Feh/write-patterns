@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/vfs.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
@@ -65,7 +66,6 @@ ssize_t filesize(int fd)
 
 ssize_t dummy(int in, int out)
 {
-	sleep(1);
 	return (ssize_t) 0;
 }
 
@@ -82,7 +82,7 @@ ssize_t read_write_bs(int in, int out, ssize_t bs)
 		if(n == -1) { assert(errno == EINTR); continue; }
 		r += n;
 		while(w < r && (m = write(out, buf, (r - w)))) {
-			if(m == -1) { fprintf(stderr, "%m\n");assert(errno == EINTR); continue; }
+			if(m == -1) { assert(errno == EINTR); continue; }
 			w += m;
 		}
 	}
@@ -121,6 +121,26 @@ ssize_t read_write_256xopt(int in, int out)
 	return read_write_opt_fact(in, out, 256);
 }
 
+ssize_t mmap_write(int in, int out)
+{
+	ssize_t w = 0, n;
+	size_t len;
+	char *p;
+
+	len = filesize(in);
+	p = mmap(NULL, len, PROT_READ, MAP_SHARED, in, 0);
+	assert(p != NULL);
+
+	while(w < len && (n = write(out, p, (len - w)))) {
+		if(n == -1) { assert(errno == EINTR); continue; }
+		w += n;
+	}
+
+	munmap(p, len);
+
+	return w;
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
@@ -132,6 +152,7 @@ int main(int argc, char *argv[])
 		{ read_write_4xopt, "read+write 4bs" },
 		{ read_write_16xopt, "read+write 16bs" },
 		{ read_write_256xopt, "read+write 256bs" },
+		{ mmap_write, "mmap+write" },
 	};
 
 	if(!is_regular_file(in) || !is_regular_file(out)) {
