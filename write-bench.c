@@ -19,7 +19,7 @@ ssize_t dummy(int in, int out)
 	return (ssize_t) j;
 }
 
-void time_run(struct bench_func *arg)
+void time_run(struct bench_func *arg, int in, int out)
 {
 	int i;
 	struct timespec start, end;
@@ -31,7 +31,7 @@ void time_run(struct bench_func *arg)
 
 	for(i = 0; i < 3; i++) {
 		clock_gettime(CLOCK_MONOTONIC, &start);
-		arg->f(STDIN_FILENO, STDOUT_FILENO);
+		arg->f(in, out);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 
 		delta = 1000 * (end.tv_sec - start.tv_sec);
@@ -53,17 +53,19 @@ int is_regular_file(int fd)
 int main(int argc, char *argv[])
 {
 	int i;
+	int in = STDIN_FILENO, out = STDIN_FILENO;
 	struct bench_func fs[] = {
 		{ dummy, "dummy" },
 	};
 
-	if(!is_regular_file(STDIN_FILENO) || !is_regular_file(STDOUT_FILENO)) {
+	if(!is_regular_file(in) || !is_regular_file(out)) {
+		assert(argc >= 1);
 		fprintf(stderr, "usage: %s <in >out\n", argv[0]);
 		exit(-1);
 	}
 
 	for(i = 0; i < sizeof(fs)/sizeof(fs[0]); i++)
-		time_run(&fs[i]);
+		time_run(&fs[i], in, out);
 
 	return 0;
 }
