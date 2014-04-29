@@ -1,0 +1,3 @@
+write-bench
+*.o
+.*.sw[pon]
