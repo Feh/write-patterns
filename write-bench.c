@@ -15,17 +15,20 @@ struct bench_func {
 	char *desc;
 };
 
+int cmp_dbl(const void *a, const void *b)
+{
+	return ((*(double *)a) < (*(double *)b) ? -1 : 1);
+}
+
 void time_run(struct bench_func *arg, int in, int out)
 {
 	int i;
 	struct timespec start, end;
-	double delta;
+	double t[3];
 
 	assert(arg != NULL);
 
-	fprintf(stderr, "%-30s", arg->desc);
-
-	for(i = 0; i < 3; i++) {
+	for(i = 0; i < sizeof(t)/sizeof(t[0]); i++) {
 		lseek(in, 0, SEEK_SET);
 		lseek(out, 0, SEEK_SET);
 		ftruncate(out, 0);
@@ -34,11 +37,14 @@ void time_run(struct bench_func *arg, int in, int out)
 		arg->f(in, out);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 
-		delta = 1000 * (end.tv_sec - start.tv_sec);
-		delta += (end.tv_nsec - start.tv_nsec) / 1000000.0;
-		fprintf(stderr, " % 12.2fms", delta);
+		t[i] = 1000 * (end.tv_sec - start.tv_sec);
+		t[i] += (end.tv_nsec - start.tv_nsec) / 1000000.0;
 	}
 
+	qsort(t, sizeof(t)/sizeof(t[0]), sizeof(t[0]), cmp_dbl);
+	fprintf(stderr, "%-30s", arg->desc);
+	for(i = 0; i < sizeof(t)/sizeof(t[0]); i++)
+		fprintf(stderr, " % 12.2fms", t[i]);
 	fprintf(stderr, "\n");
 }
 
