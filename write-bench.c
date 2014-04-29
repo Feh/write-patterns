@@ -1,7 +1,10 @@
+#define _GNU_SOURCE
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/vfs.h>
 #include <sys/mman.h>
+#include <sys/sendfile.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
@@ -32,7 +35,7 @@ void time_run(struct bench_func *arg, int in, int out)
 		lseek(in, 0, SEEK_SET);
 		lseek(out, 0, SEEK_SET);
 		ftruncate(out, 0);
-		usleep(500000);
+		//usleep(500000);
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		arg->f(in, out);
@@ -71,9 +74,17 @@ ssize_t filesize(int fd)
 	return (ssize_t) st.st_size;
 }
 
-ssize_t dummy(int in, int out)
+ssize_t dummy_read_file(int in, int out)
 {
-	return (ssize_t) 0;
+	ssize_t n;
+	char buf[8192];
+
+	while((n = read(in, buf, sizeof(buf)))) {
+		if(n == -1) { assert(errno == EINTR); continue; }
+		/* do nothing */
+	}
+
+	return 0;
 }
 
 ssize_t read_write_bs(int in, int out, ssize_t bs)
@@ -93,6 +104,9 @@ ssize_t read_write_bs(int in, int out, ssize_t bs)
 			w += m;
 		}
 	}
+
+	free(buf);
+
 	return w;
 }
 
@@ -148,18 +162,58 @@ ssize_t mmap_write(int in, int out)
 	return w;
 }
 
+ssize_t pipe_splice(int in, int out)
+{
+	size_t bs = 65536;
+	ssize_t w = 0, r = 0, t, n, m;
+	int pipefd[2];
+
+	assert(pipe(pipefd) != -1);
+
+	t = filesize(in);
+
+	while(r < t && (n = splice(in, NULL, pipefd[1], NULL, bs, 0))) {
+		if(n == -1) { assert(errno == EINTR); continue; }
+		r += n;
+		while(w < r && (m = splice(pipefd[0], NULL, out, NULL, bs, 0))) {
+			if(m == -1) { assert(errno == EINTR); continue; }
+			w += m;
+		}
+	}
+
+	close(pipefd[0]);
+	close(pipefd[1]);
+
+	return w;
+}
+
+ssize_t do_sendfile(int in, int out)
+{
+	ssize_t t = filesize(in);
+	off_t ofs = 0;
+	while(ofs < t) {
+		if(sendfile(out, in, &ofs, t - ofs) == -1) {
+			assert(errno == EINTR);
+			continue;
+		}
+	}
+	return t;
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 	int in = STDIN_FILENO, out = STDOUT_FILENO;
 	struct bench_func fs[] = {
-		{ dummy, "dummy" },
+		{ dummy_read_file, "dummy" },
 		{ read_write_1k, "read+write 1k" },
 		{ read_write_opt, "read+write bs" },
 		{ read_write_4xopt, "read+write 4bs" },
 		{ read_write_16xopt, "read+write 16bs" },
 		{ read_write_256xopt, "read+write 256bs" },
 		{ mmap_write, "mmap+write" },
+		{ pipe_splice, "pipe+splice" },
+		{ do_sendfile, "sendfile" },
 	};
 
 	if(!is_regular_file(in) || !is_regular_file(out)) {
