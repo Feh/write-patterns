@@ -1,8 +1,10 @@
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct bench_func {
 	ssize_t (*f)(int, int);
@@ -35,12 +37,25 @@ void time_run(struct bench_func *arg)
 	fprintf(stdout, "%-40s %.2fms\n", arg->desc, delta);
 }
 
+int is_regular_file(int fd)
+{
+	struct stat st;
+	if(fstat(fd, &st) == -1)
+		return -1;
+	return (S_ISREG(st.st_mode));
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 	struct bench_func fs[] = {
 		{ dummy, "dummy" },
 	};
+
+	if(!is_regular_file(STDIN_FILENO) || !is_regular_file(STDOUT_FILENO)) {
+		fprintf(stderr, "usage: %s <in >out\n", argv[0]);
+		exit(-1);
+	}
 
 	for(i = 0; i < sizeof(fs)/sizeof(fs[0]); i++)
 		time_run(&fs[i]);
