@@ -21,20 +21,25 @@ ssize_t dummy(int in, int out)
 
 void time_run(struct bench_func *arg)
 {
+	int i;
 	struct timespec start, end;
 	double delta;
 
 	assert(arg != NULL);
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	arg->f(STDIN_FILENO, STDOUT_FILENO);
+	fprintf(stderr, "%-30s", arg->desc);
 
-	clock_gettime(CLOCK_MONOTONIC, &end);
+	for(i = 0; i < 3; i++) {
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		arg->f(STDIN_FILENO, STDOUT_FILENO);
+		clock_gettime(CLOCK_MONOTONIC, &end);
 
-	delta = 1000 * (end.tv_sec - start.tv_sec);
-	delta += (end.tv_nsec - start.tv_nsec) / 100000.0;
+		delta = 1000 * (end.tv_sec - start.tv_sec);
+		delta += (end.tv_nsec - start.tv_nsec) / 100000.0;
+		fprintf(stderr, " % 12.2fms", delta);
+	}
 
-	fprintf(stdout, "%-40s %.2fms\n", arg->desc, delta);
+	fprintf(stderr, "\n");
 }
 
 int is_regular_file(int fd)
