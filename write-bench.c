@@ -92,7 +92,6 @@ void time_run(struct bench_func *arg, int in, int out)
 {
 	int i;
 	struct timespec start, end;
-	struct rusage before, after;
 
 	assert(arg != NULL);
 
@@ -102,11 +101,9 @@ void time_run(struct bench_func *arg, int in, int out)
 		ftruncate(out, 0);
 		usleep(100000);
 
-		getrusage(RUSAGE_SELF, &before);
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		arg->f(in, out);
 		clock_gettime(CLOCK_MONOTONIC, &end);
-		getrusage(RUSAGE_SELF, &after);
 
 		assert(arg->f == dummy_read_file || filesize(in) == filesize(out));
 
