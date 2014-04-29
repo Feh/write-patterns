@@ -13,13 +13,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 struct bench_func {
 	ssize_t (*f)(int, int);
 	char *desc;
+	int t[3];
 };
 
 int cmp_int(const void *a, const void *b);
+int cmp_bench_func(const void *a, const void *b);
 int is_regular_file(int fd);
 ssize_t block_size(int fd);
 ssize_t do_sendfile(int in, int out);
@@ -33,6 +36,7 @@ ssize_t pipe_splice_advices_falloc(int in, int out);
 ssize_t pipe_splice_advices(int in, int out);
 ssize_t pipe_splice_advices_truncate(int in, int out);
 ssize_t pipe_splice(int in, int out);
+void print_benchfunc(struct bench_func *arg, const char *eol, int ref);
 ssize_t read_write_16bs_advices_falloc(int in, int out);
 ssize_t read_write_16bs_advices(int in, int out);
 ssize_t read_write_16bs_advices_truncate(int in, int out);
@@ -79,16 +83,20 @@ int cmp_int(const void *a, const void *b)
 	return ((*(int *)a) < (*(int *)b) ? -1 : 1);
 }
 
+int cmp_bench_func(const void *a, const void *b)
+{
+	return ((((struct bench_func *)a)->t[0]) < (((struct bench_func *)b)->t[0]) ? -1 : 1);
+}
+
 void time_run(struct bench_func *arg, int in, int out)
 {
 	int i;
 	struct timespec start, end;
 	struct rusage before, after;
-	int t[3];
 
 	assert(arg != NULL);
 
-	for(i = 0; i < sizeof(t)/sizeof(t[0]); i++) {
+	for(i = 0; i < sizeof(arg->t)/sizeof(arg->t[0]); i++) {
 		lseek(in, 0, SEEK_SET);
 		lseek(out, 0, SEEK_SET);
 		ftruncate(out, 0);
@@ -102,15 +110,24 @@ void time_run(struct bench_func *arg, int in, int out)
 
 		assert(arg->f == dummy_read_file || filesize(in) == filesize(out));
 
-		t[i] = 1000 * (end.tv_sec - start.tv_sec);
-		t[i] += (end.tv_nsec - start.tv_nsec) / 1000000;
+		arg->t[i] = 1000 * (end.tv_sec - start.tv_sec);
+		arg->t[i] += (end.tv_nsec - start.tv_nsec) / 1000000;
 	}
 
-	qsort(t, sizeof(t)/sizeof(t[0]), sizeof(t[0]), cmp_int);
+	qsort(arg->t, sizeof(arg->t)/sizeof(arg->t[0]), sizeof(arg->t[0]), cmp_int);
+	print_benchfunc(arg, "\r", 0);
+}
+
+
+void print_benchfunc(struct bench_func *arg, const char *eol, int ref)
+{
+	int i;
 	fprintf(stderr, "%-40s", arg->desc);
-	for(i = 0; i < sizeof(t)/sizeof(t[0]); i++)
-		fprintf(stderr, " % 8dms", t[i]);
-	fprintf(stderr, "\n");
+	for(i = 0; i < sizeof(arg->t)/sizeof(arg->t[0]); i++)
+		fprintf(stderr, " % 8dms", arg->t[i]);
+	if(ref > 0)
+		fprintf(stderr, "  (+% 2.1f%%)", (100.0 * (arg->t[0] - ref)) / ref);
+	fprintf(stderr, eol ? eol : "\n");
 }
 
 ssize_t dummy_read_file(int in, int out)
@@ -343,7 +360,6 @@ int main(int argc, char *argv[])
 	int i;
 	int in = STDIN_FILENO, out = STDOUT_FILENO;
 	struct bench_func fs[] = {
-		{ dummy_read_file, "dummy" },
 		{ read_write_1k, "read+write 1k" },
 		{ read_write_opt, "read+write bs" },
 		{ read_write_4xopt, "read+write 4bs" },
@@ -372,8 +388,14 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
+	dummy_read_file(in, out); /* don’t give anybody a head start... */
+
 	for(i = 0; i < sizeof(fs)/sizeof(fs[0]); i++)
 		time_run(&fs[i], in, out);
+
+	qsort(fs, sizeof(fs)/sizeof(fs[0]), sizeof(fs[0]), cmp_bench_func);
+	for(i = 0; i < sizeof(fs)/sizeof(fs[0]); i++)
+		print_benchfunc(&fs[i], "\n", i == 0 ? 0 : fs[0].t[0]);
 
 	return 0;
 }
