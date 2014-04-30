@@ -15,6 +15,8 @@ Notes
     * In particular, depending on filesystem, the next `ftruncate(fd, 0)` may take very long
     * No `fsync()` or `fdatasync()` is performed
 
+Also see [my blog post on the topic](http://blog.plenz.com/2014-04/so-you-want-to-write-to-a-file-real-fast.html).
+
 Some Results
 ============
 
