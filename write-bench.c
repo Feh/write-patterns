@@ -220,15 +220,16 @@ ssize_t pipe_splice(int in, int out)
 	size_t bs = 65536;
 	ssize_t w = 0, r = 0, t, n, m;
 	int pipefd[2];
+	int flags = SPLICE_F_MOVE | SPLICE_F_MORE;
 
 	assert(pipe(pipefd) != -1);
 
 	t = filesize(in);
 
-	while(r < t && (n = splice(in, NULL, pipefd[1], NULL, bs, 0))) {
+	while(r < t && (n = splice(in, NULL, pipefd[1], NULL, bs, flags))) {
 		if(n == -1) { assert(errno == EINTR); continue; }
 		r += n;
-		while(w < r && (m = splice(pipefd[0], NULL, out, NULL, bs, 0))) {
+		while(w < r && (m = splice(pipefd[0], NULL, out, NULL, bs, flags))) {
 			if(m == -1) { assert(errno == EINTR); continue; }
 			w += m;
 		}
