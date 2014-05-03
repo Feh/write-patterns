@@ -43,6 +43,7 @@ ssize_t read_write_16bs_advices_truncate(int in, int out);
 ssize_t read_write_16xopt(int in, int out);
 ssize_t read_write_1k(int in, int out);
 ssize_t read_write_256xopt(int in, int out);
+ssize_t read_write_4096xopt(int in, int out);
 ssize_t read_write_4xopt(int in, int out);
 ssize_t read_write_bs(int in, int out, ssize_t bs);
 ssize_t read_write_opt_fact(int in, int out, ssize_t fact);
@@ -193,6 +194,11 @@ ssize_t read_write_16xopt(int in, int out)
 ssize_t read_write_256xopt(int in, int out)
 {
 	return read_write_opt_fact(in, out, 256);
+}
+
+ssize_t read_write_4096xopt(int in, int out)
+{
+	return read_write_opt_fact(in, out, 4096);
 }
 
 ssize_t mmap_write(int in, int out)
@@ -366,6 +372,7 @@ int main(int argc, char *argv[])
 		{ read_write_16bs_advices_falloc, "read+write 16bs + advices + falloc" },
 		{ read_write_16bs_advices_truncate, "read+write 16bs + advices + trunc" },
 		{ read_write_256xopt, "read+write 256bs" },
+		{ read_write_4096xopt, "read+write 4096bs" },
 		{ mmap_write, "mmap+write" },
 		{ mmap_write_advices, "mmap+write + advices" },
 		{ mmap_write_advices_falloc, "mmap+write + advices + falloc" },
