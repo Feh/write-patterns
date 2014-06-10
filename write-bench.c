@@ -212,7 +212,7 @@ ssize_t mmap_write(int in, int out)
 	p = mmap(NULL, len, PROT_READ, MAP_SHARED, in, 0);
 	assert(p != NULL);
 
-	while(w < len && (n = write(out, p, (len - w)))) {
+	while(w < len && (n = write(out, p + w, (len - w)))) {
 		if(n == -1) { assert(errno == EINTR); continue; }
 		w += n;
 	}
