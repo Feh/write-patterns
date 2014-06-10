@@ -152,7 +152,8 @@ ssize_t read_write_bs(int in, int out, ssize_t bs)
 
 	while(r < t && (n = read(in, buf, bs))) {
 		if(n == -1) { assert(errno == EINTR); continue; }
-		r += n;
+		r = n;
+		w = 0;
 		while(w < r && (m = write(out, buf + w, (r - w)))) {
 			if(m == -1) { assert(errno == EINTR); continue; }
 			w += m;
